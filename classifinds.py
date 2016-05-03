@@ -1,11 +1,17 @@
 import requests
 import smtplib
 import json
-import configparser
+try:
+	import configparser
+except ImportError:
+	import ConfigParser as configparser
+
 import json
 import time
+import os
 from datetime import datetime, timedelta
 import logging
+from logging.handlers import RotatingFileHandler
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -16,11 +22,29 @@ from email.mime.application import MIMEApplication
 Find some cool stuff.
 """
 config = configparser.ConfigParser()
-config.read('config.ini')
-ourthings = json.load(open('things.json'))
-params = json.load(open('params.json'))
+base = "" #Add base of config.ini file and things.json...
 
-logging.basicConfig(filename='klassifinds.log',level=logging.INFO)
+config.read(base + 'config.ini')
+ourthings = json.load(open(base + 'things.json'))
+params = {
+	"cmd": "list",
+	"c": "500",
+	"o": "0",
+	"min": "0",
+	"max": "100",
+	"d": "20",
+	"srt": "Most+recent",
+	"slr": "Private+sellers"
+}
+# Set up a specific logger with our desired output level
+klassifinds_log = logging.getLogger('MyLogger')
+klassifinds_log.setLevel(logging.INFO)
+
+# Add the log message handler to the logger
+handler = RotatingFileHandler(base+'klassifinds.log', maxBytes=1000000, backupCount=0)
+
+klassifinds_log.addHandler(handler)
+
 
 DEBUG = False
 
@@ -37,7 +61,7 @@ def process_ad(ad, keywords):
 		"cmd": "ad",
 		"id": ad['sid']
 	}
-	r = requests.post(config['PARAMS']['api_base'], data=ad_params)
+	r = requests.post(config.get('PARAMS', 'api_base'), data=ad_params)
 	ad_info = json.loads(r.text)[0]
 	ad_description = []
 	if ad_info['title']:
@@ -53,31 +77,31 @@ def process_ad(ad, keywords):
 
 	return_string = ""
 	if keyword_hits:
-		return_string = HTML_EMAIL_TEMPLATE.format(ad['image'], config['PARAMS']['thumbnail'], ad_info['title'], 
+		return_string = HTML_EMAIL_TEMPLATE.format(ad['image'], config.get('PARAMS', 'thumbnail'), ad_info['title'], 
 			ad_info['price'], ad_info['city'], ad_info['state'], ' '.join(keyword_hits),
-			config['PARAMS']['web_base'], '218', ad['sid'])
+			config.get('PARAMS', 'web_base'), '218', ad['sid'])
 	else:
 		return_string = None
 
 	return return_string
 
 def handle_things(email, things):
-	logging.info("Checking {} stuff".format(email))
+	klassifinds_log.info("Checking {} stuff".format(email))
 	# Create message container.
 	email_summary = MIMEMultipart('related')
-	email_summary['Subject'] = config['EMAIL']['subject']
-	email_summary['From'] = config['EMAIL']['email']
+	email_summary['Subject'] = "Klassifind winners"
+	email_summary['From'] = config.get('EMAIL', 'email')
 	email_summary['To'] = email
 	email_contents = []
 	total_hits = 0
 	for cool_thing, info in things.items():
 
 		params['s'] = cool_thing
-		logging.info("\t- {}".format(cool_thing))
+		klassifinds_log.info("\t- {}".format(cool_thing))
 		max_price = info['max']
 		keywords = info['keywords']
 
-		r = requests.post(config['PARAMS']['api_base'], data=params)
+		r = requests.post(config.get('PARAMS', 'api_base'), data=params)
 		hitresults = json.loads(r.text)
 		now = datetime.now()
 		last_run = now - timedelta(hours = 1)
@@ -100,15 +124,16 @@ def handle_things(email, things):
 	return total_hits, email_summary
 
 def klassifinds():
+	klassifinds_log.info(datetime.utcnow())
 	server = smtplib.SMTP('smtp.gmail.com', 587)
 	server.starttls()
-	server.login(config['EMAIL']['email'], config['EMAIL']['key'])
+	server.login(config.get('EMAIL', 'email'), config.get('EMAIL', 'key'))
 
 	for email, things in ourthings.items():
 		total_hits, email_summary = handle_things(email, things)
 		if total_hits and not DEBUG:
-			logging.info("Sending {} Klassifind winners to {}.".format(total_hits, email))
-			server.sendmail(config['EMAIL']['email'], email, email_summary.as_string())
-
+			klassifinds_log.info("Sending {} Klassifind winners to {}.".format(total_hits, email))
+			server.sendmail(config.get('EMAIL', 'email'), email, email_summary.as_string())
+	klassifinds_log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 if __name__ == '__main__':
 	klassifinds()

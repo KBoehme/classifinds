@@ -1,6 +1,10 @@
 config.ini
 params.json
 things.json
+requests*
+encrypted-secret
+kevinKey.pem
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
