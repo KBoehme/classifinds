@@ -19,7 +19,7 @@ find cool stuff
 	},
 	"person2@gmail.com": {
 		"search+terms+seperated+by+plus": {
-			"max": max_price_here,
+			"max": "max_price_here",
 			"keywords": ["This is a list of keywords, if any of these are found in the description or title of an ad this counts as a promising ad and will be emailed to person2@gmail.com."]
 		},
 	}
@@ -37,5 +37,5 @@ thumbnail = ?filter=ksl/newhl
 
 [EMAIL]
 email = youremail@gmail.com
-key = secret_password_for_your_email
+key = email_password
 ```
