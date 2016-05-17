@@ -40,7 +40,7 @@ TEXT_MESSAGE_MAP = {
 Find some cool stuff.
 """
 config = configparser.ConfigParser()
-base = "" #Add base of config.ini file and things.json...
+base = "/home/ec2-user/classifinds/" #Add base of config.ini file and things.json...
 
 config.read(base + 'config.ini')
 ourthings = json.load(open(base + 'things.json'))
@@ -146,11 +146,10 @@ def handle_things(email, things):
 			if result:
 				hits += 1
 				ad_hit_contents.append(result)
-				if send_text:
-					klassifinds_log.info('Found Text worthy Hit!')
+				if text_person:
 					send_text = True
 		if hits:
-			email_contents.append("<h2>{}</h2>".format(' '.join(cool_thing.split('+')).title()))
+			email_contents.append("<h2>{}</h2>".format(' '.join(cool_thing).title()))
 			email_contents.extend(ad_hit_contents)
 			email_contents.append('<hr>')
 		total_hits += hits
